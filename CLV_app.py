@@ -1,3 +1,122 @@
+pip install lifetimes
+
+import pandas as pd
+import numpy as np
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, r2_score
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+df=pd.read_csv("clv.csv")
+
+df.head()
+
+print(df.info())
+print(df.describe())
+
+# Drop customer_id (not useful for prediction)
+df = df.drop("customer_id", axis=1)
+
+# Fill missing values (if any)
+df = df.fillna(df.mean())
+
+X = df.drop("CLV", axis=1)  # features
+y = df["CLV"]               # target
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("Mean Absolute Error:", mae)
+print("R2 Score:", r2)
+
+coefficients = pd.DataFrame({
+    "Feature": X.columns,
+    "Coefficient": model.coef_
+})
+
+print(coefficients)
+
+new_customer = pd.DataFrame({
+    "purchase_history": [20],
+    "tenure": [12],
+    "total_spent": [5000],
+})
+
+predicted_clv = model.predict(new_customer)
+print("Predicted CLV:", predicted_clv[0])
+
+# Avoid division by zero
+df["avg_order_value"] = df["total_spent"] / (df["purchase_history"] + 1)
+
+df["spend_per_month"] = df["total_spent"] / (df["tenure"] + 1)
+
+df["purchase_frequency"] = df["purchase_history"] / (df["tenure"] + 1)
+
+X = df.drop("CLV", axis=1)
+y = df["CLV"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+pipeline = Pipeline([
+    ("scaler", StandardScaler()),
+    ("model", RandomForestRegressor(n_estimators=100, random_state=42))
+])
+
+pipeline.fit(X_train, y_train)
+
+y_pred = pipeline.predict(X_test)
+
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("MAE:", mae)
+print("R2 Score:", r2)
+
+plt.figure(figsize=(6,6))
+sns.scatterplot(x=y_test, y=y_pred)
+plt.xlabel("Actual CLV")
+plt.ylabel("Predicted CLV")
+plt.title("Actual vs Predicted CLV")
+plt.show()
+
+import joblib
+
+joblib.dump(pipeline, "clv_model.pkl")
+
+new_customer = pd.DataFrame({
+    "purchase_history": [20],
+    "tenure": [12],
+    "total_spent": [5000]
+})
+
+feature_importance = pipeline.named_steps["model"].feature_importances_
+
+feature_names = X.columns
+
+importance_df = pd.DataFrame({
+    "Feature": feature_names,
+    "Importance": feature_importance
+}).sort_values(by="Importance", ascending=False)
+
+print(importance_df)
+
 import pandas as pd
 
 df = pd.read_csv("clv.csv")
