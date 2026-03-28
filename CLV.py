@@ -3,7 +3,7 @@ import pandas as pd
 df = pd.read_csv("clv.csv")
 df["purchase_history"] = pd.to_datetime(df["purchase_history"])
 
-  from lifetimes.utils import summary_data_from_transaction_data
+from lifetimes.utils import summary_data_from_transaction_data
 
 summary = summary_data_from_transaction_data(
     df,
