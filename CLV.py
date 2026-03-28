@@ -155,8 +155,6 @@ df['predicted_clv_6m'] = df['predicted_avg_value'] * df['predicted_transactions_
 
 print(df[['customer_id', 'predicted_avg_value', 'predicted_transactions_6m', 'predicted_clv_6m']].head())
 
-pip install streamlit pandas lifetimes
-
 import streamlit as st
 
 uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
@@ -179,7 +177,7 @@ if uploaded_file:
     st.subheader("Data Preview")
     st.dataframe(df.head())
 
-    # Ensure required columns exist
+    # Required columns check
     required_cols = ['customer_id', 'tenure', 'purchase_history', 'total_spent']
     if all(col in df.columns for col in required_cols):
 
@@ -188,7 +186,8 @@ if uploaded_file:
             'purchase_history': 'frequency',
             'total_spent': 'monetary_value'
         })
-        df['monetary_value'] = df['monetary_value'] / df['frequency']
+        # Avoid division by zero
+        df['monetary_value'] = df['monetary_value'] / df['frequency'].replace(0, 1)
 
         # Fit Gamma-Gamma model
         ggf = GammaGammaFitter(penalizer_coef=0.1)
@@ -201,7 +200,7 @@ if uploaded_file:
 
         # Predict transactions for next 6 months (approximation)
         prediction_horizon_months = 6
-        df['predicted_transactions_6m'] = df['frequency'] / df['tenure'] * prediction_horizon_months
+        df['predicted_transactions_6m'] = df['frequency'] / df['tenure'].replace(0, 1) * prediction_horizon_months
 
         # Compute CLV
         df['predicted_clv_6m'] = df['predicted_avg_value'] * df['predicted_transactions_6m']
@@ -209,7 +208,7 @@ if uploaded_file:
         st.subheader("Predicted CLV")
         st.dataframe(df[['customer_id', 'predicted_avg_value', 'predicted_transactions_6m', 'predicted_clv_6m']])
 
-        # Optionally download predictions
+        # Download predictions as CSV
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Download Predictions as CSV",
@@ -217,5 +216,6 @@ if uploaded_file:
             file_name='predicted_clv.csv',
             mime='text/csv'
         )
+
     else:
         st.error(f"CSV must contain columns: {required_cols}")
